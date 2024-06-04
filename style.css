@@ -85,3 +85,8 @@ body,
 #logo{
     position: absolute;
 }
+
+.big-food{
+    background-color: #dedede;
+    border-radius: 50%;
+}

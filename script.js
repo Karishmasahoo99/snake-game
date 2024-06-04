@@ -8,17 +8,26 @@ const highScoreText=document.getElementById("highScore");
 let gridSize=20;
 let snake=[{x:10,y:10}]
 let food=generateFood();
+let bigFood=null;
+let bigFoodTimeout=null;
 let highScore=0;
 let direction="right";
 let gameInterval;
 let gameSpeedDelay=200;
 let gameStarted=false;
+let foodEatenCount=0;
+let sc=0;
+
+const foodSound=new Audio("./eating-sound.mp3")
 
 //Draw game map, snake, food
 function draw(){
     board.innerHTML="";
     drawSnake();
     drawFood();
+    if(bigFood){
+        drawBigFood();
+    }
     updateScore();
 }
 
@@ -50,6 +59,14 @@ function drawFood(){
     }
 }
 
+function drawBigFood(){
+    if(gameStarted){
+        const bigFoodElement=createGameElement("div","big-food");
+        setPosition(bigFoodElement, bigFood);
+        board.appendChild(bigFoodElement);
+    }
+}
+
 function generateFood(){
     const x=Math.floor(Math.random()*gridSize)+1;
     const y=Math.floor(Math.random()*gridSize)+1;
@@ -73,17 +90,29 @@ function move(){
                 break;
     }
     snake.unshift(head);
-    if(head.x===food.x && head.y===food.y){
-        food=generateFood();
+    if (bigFood && head.x === bigFood.x && head.y === bigFood.y) {
+        bigFood = null;
+        foodEatenCount = 0; // Reset the count after eating big food
         increaseSpeed();
-        clearInterval(gameInterval); //clear past Interval
-        gameInterval=setInterval(()=>{
-            move();
-            checkCollision();
-            draw();
-        }, gameSpeedDelay);
-    }
-    else{
+        foodSound.play();
+        sc+=5; // Add 5 points for big food
+    } else if (head.x === food.x && head.y === food.y) {
+        foodEatenCount++;
+        food = generateFood();
+        sc+=1;
+        foodSound.play();
+        if (foodEatenCount % 5 === 0) {
+            bigFood = generateFood();
+            if (bigFoodTimeout) {
+                clearTimeout(bigFoodTimeout);
+            }
+            bigFoodTimeout = setTimeout(() => {
+                bigFood = null;
+                draw();
+            }, 5000); // Big food disappears after 5 seconds
+        }
+        increaseSpeed();
+    } else {
         snake.pop();
     }
     
@@ -133,7 +162,7 @@ function handleKeyPress(event){
 
 document.addEventListener("keydown", handleKeyPress);
 function increaseSpeed(){
-    console.log(gameSpeedDelay);
+    ///console.log(gameSpeedDelay);
     if(gameSpeedDelay>150){
         gameSpeedDelay-=5;
     }
@@ -164,7 +193,8 @@ function checkCollision(){
 function resetGame(){
     updateHighScore();
     stopGame();
-    snake=[{x:10, y:10}]
+    snake=[{x:10, y:10}];
+    sc=0;
     food=generateFood();
     direction="right";
     gameSpeedDelay=200;
@@ -172,22 +202,28 @@ function resetGame(){
 }
 
 function updateScore(){
-    const currentScore=snake.length-1;
-    score.textContent=currentScore.toString().padStart(3,'0');
+    score.textContent=sc.toString().padStart(3,'0');
 }
 
 function stopGame(){
     clearInterval(gameInterval);
+    if(bigFoodTimeout){
+        clearTimeout(bigFoodTimeout);
+    }
     gameStarted=false;
     instructionText.style.display="block";
     logo.style.display="block";
 }
 
 function updateHighScore(){
-    const currentScore=snake.length-1;
-    if(currentScore>highScore){
-        highScore=currentScore;
+    if(sc>highScore){
+        highScore=sc;
         highScoreText.textContent=highScore.toString().padStart(3,'0');
     }
     highScoreText.style.display="block";
 }
+
+// function addScore(points){
+//     const currentScore=snake.length-1 + points;
+//     score.textContent=currentScore.toString().padStart(3,'0');
+// }
